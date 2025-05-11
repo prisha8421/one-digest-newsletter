@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "813587709403",
+    "project_id": "newsletter-63e04",
+    "storage_bucket": "newsletter-63e04.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:813587709403:android:84fa06150a63cd5590bbfe",
+        "android_client_info": {
+          "package_name": "com.example.update_latest"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC4bDqx7D2VXlz6DjgmdIMxGrL8ttF504M"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

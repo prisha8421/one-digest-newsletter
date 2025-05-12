@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class SummaryPage extends StatefulWidget {
   const SummaryPage({super.key});
@@ -16,21 +18,42 @@ class _SummaryPageState extends State<SummaryPage> {
     'In-depth Article',
   ];
 
-  void saveSummaryPreference() {
-    
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Saved preference: $selectedDepth')),
-    );
+  Future<void> saveSummaryPreference() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('User not logged in')),
+      );
+      return;
+    }
+
+    final userDoc = FirebaseFirestore.instance.collection('users').doc(user.uid);
+
+    try {
+      await userDoc.set({
+        'preferences': {
+          'summaryDepth': selectedDepth,
+        }
+      }, SetOptions(merge: true));
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Saved preference: $selectedDepth')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error saving preference: $e')),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Summary Customisation'),
-        backgroundColor: Color(0xFF8981DF),
+        title: const Text('Summary Customisation'),
+        backgroundColor: const Color(0xFF8981DF),
         leading: IconButton(
-          icon: Icon(Icons.arrow_back),
+          icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -39,12 +62,14 @@ class _SummaryPageState extends State<SummaryPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Choose your preferred content depth:',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF3F3986),
-                )),
+            const Text(
+              'Choose your preferred content depth:',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF3F3986),
+              ),
+            ),
             const SizedBox(height: 24),
             for (String option in summaryOptions)
               ListTile(
@@ -64,13 +89,13 @@ class _SummaryPageState extends State<SummaryPage> {
               child: ElevatedButton(
                 onPressed: saveSummaryPreference,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Color(0xFF3F3986),
-                  padding: EdgeInsets.symmetric(horizontal: 40, vertical: 14),
+                  backgroundColor: const Color(0xFF3F3986),
+                  padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 14),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(30),
                   ),
                 ),
-                child: Text(
+                child: const Text(
                   'Save Preference',
                   style: TextStyle(color: Colors.white),
                 ),

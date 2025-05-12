@@ -6,6 +6,8 @@ import 'firebase_options.dart';
 import 'pages/home_page.dart';
 import 'pages/auth_page.dart';
 
+
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(

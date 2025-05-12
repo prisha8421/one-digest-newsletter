@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class ToneFormatPage extends StatefulWidget {
   const ToneFormatPage({super.key});
@@ -14,21 +16,43 @@ class _ToneFormatPageState extends State<ToneFormatPage> {
   final List<String> toneOptions = ['Casual', 'Formal', 'Friendly', 'Professional'];
   final List<String> formatOptions = ['Bullet Points', 'Paragraph', 'Brief Highlights'];
 
-  void saveToneAndFormat() {
-    // TODO: Store this to Firebase later
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Saved: $selectedTone tone, $selectedFormat format')),
-    );
+  Future<void> saveToneAndFormat() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('User not logged in')),
+      );
+      return;
+    }
+
+    final userDoc = FirebaseFirestore.instance.collection('users').doc(user.uid);
+
+    try {
+      await userDoc.set({
+        'preferences': {
+          'tone': selectedTone,
+          'format': selectedFormat,
+        }
+      }, SetOptions(merge: true));
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Saved: $selectedTone tone, $selectedFormat format')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error saving preferences: $e')),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Tone & Format'),
-        backgroundColor: Color(0xFF8981DF),
+        title: const Text('Tone & Format'),
+        backgroundColor: const Color(0xFF8981DF),
         leading: IconButton(
-          icon: Icon(Icons.arrow_back),
+          icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -37,7 +61,7 @@ class _ToneFormatPageState extends State<ToneFormatPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Choose your preferred **tone**:',
+            const Text('Choose your preferred tone:',
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF3F3986))),
             const SizedBox(height: 16),
             for (String tone in toneOptions)
@@ -45,11 +69,11 @@ class _ToneFormatPageState extends State<ToneFormatPage> {
                 title: Text(tone),
                 value: tone,
                 groupValue: selectedTone,
-                activeColor: Color(0xFF3F3986),
+                activeColor: const Color(0xFF3F3986),
                 onChanged: (value) => setState(() => selectedTone = value!),
               ),
             const SizedBox(height: 24),
-            Text('Choose your preferred **format**:',
+            const Text('Choose your preferred format:',
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF3F3986))),
             const SizedBox(height: 16),
             for (String format in formatOptions)
@@ -57,7 +81,7 @@ class _ToneFormatPageState extends State<ToneFormatPage> {
                 title: Text(format),
                 value: format,
                 groupValue: selectedFormat,
-                activeColor: Color(0xFF3F3986),
+                activeColor: const Color(0xFF3F3986),
                 onChanged: (value) => setState(() => selectedFormat = value!),
               ),
             const Spacer(),
@@ -65,7 +89,7 @@ class _ToneFormatPageState extends State<ToneFormatPage> {
               child: ElevatedButton(
                 onPressed: saveToneAndFormat,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Color(0xFF3F3986),
+                  backgroundColor: const Color(0xFF3F3986),
                   padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 14),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(30),

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class LanguagePage extends StatefulWidget {
   const LanguagePage({super.key});
@@ -22,11 +24,32 @@ class _LanguagePageState extends State<LanguagePage> {
 
   String selectedLanguage = 'en'; // Default language
 
-  void saveLanguagePreference() {
-    // TODO: Save to Firestore or apply using localization
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Language set to ${languageMap[selectedLanguage]}')),
-    );
+  Future<void> saveLanguagePreference() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('User not logged in')),
+      );
+      return;
+    }
+
+    final userDoc = FirebaseFirestore.instance.collection('users').doc(user.uid);
+
+    try {
+      await userDoc.set({
+        'preferences': {
+          'language': selectedLanguage,
+        }
+      }, SetOptions(merge: true));
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Language set to ${languageMap[selectedLanguage]}')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error saving language: $e')),
+      );
+    }
   }
 
   @override

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+
+import '../database/user_details.dart';
 import 'home_page.dart';
 
 class AuthPage extends StatefulWidget {
@@ -72,7 +74,7 @@ class _AuthPageState extends State<AuthPage> {
 
                   if (email.isEmpty || password.isEmpty) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
+                      const SnackBar(
                         content: Text('Please enter both email and password.'),
                       ),
                     );
@@ -81,27 +83,39 @@ class _AuthPageState extends State<AuthPage> {
 
                   try {
                     if (isLogin) {
-                      await FirebaseAuth.instance.signInWithEmailAndPassword(
+                      final userCredential = await FirebaseAuth.instance
+                          .signInWithEmailAndPassword(
                         email: email,
                         password: password,
                       );
+
+                      final user = userCredential.user;
+                      if (user != null) {
+                        await UserDetails.getUserPreferences(user.uid);
+                      }
+
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Login successful!')),
+                        const SnackBar(content: Text('Login successful!')),
                       );
                     } else {
-                      await FirebaseAuth.instance
+                      final userCredential = await FirebaseAuth.instance
                           .createUserWithEmailAndPassword(
-                            email: email,
-                            password: password,
-                          );
+                        email: email,
+                        password: password,
+                      );
+
+                      final user = userCredential.user;
+                      if (user != null) {
+                        await UserDetails.saveUserData(user);
+                      }
+
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
+                        const SnackBar(
                           content: Text('Account created successfully!'),
                         ),
                       );
                     }
 
-                    // Navigate to home
                     Navigator.pushReplacement(
                       context,
                       MaterialPageRoute(builder: (_) => const HomePage()),

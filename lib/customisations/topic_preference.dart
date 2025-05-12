@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class TopicPreferencePage extends StatefulWidget {
   const TopicPreferencePage({super.key});
@@ -32,21 +34,42 @@ class _TopicPreferencePageState extends State<TopicPreferencePage> {
     });
   }
 
-  void savePreferences() {
-    
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Preferences saved: ${selectedTopics.join(', ')}')),
-    );
+  Future<void> savePreferences() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('User not logged in')),
+      );
+      return;
+    }
+
+    final userDoc = FirebaseFirestore.instance.collection('users').doc(user.uid);
+
+    try {
+      await userDoc.set({
+        'preferences': {
+          'topics': selectedTopics.toList(),
+        }
+      }, SetOptions(merge: true));
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Preferences saved: ${selectedTopics.join(', ')}')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error saving preferences: $e')),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Choose Your Topics'),
-        backgroundColor: Color(0xFF8981DF),
+        title: const Text('Choose Your Topics'),
+        backgroundColor: const Color(0xFF8981DF),
         leading: IconButton(
-          icon: Icon(Icons.arrow_back),
+          icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -55,7 +78,7 @@ class _TopicPreferencePageState extends State<TopicPreferencePage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
+            const Text(
               'Pick topics you’re interested in:',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
@@ -68,13 +91,13 @@ class _TopicPreferencePageState extends State<TopicPreferencePage> {
                 return ChoiceChip(
                   label: Text(topic),
                   selected: isSelected,
-                  selectedColor: Color(0xFF3F3986),
+                  selectedColor: const Color(0xFF3F3986),
                   labelStyle: TextStyle(
-                    color: isSelected ? Colors.white : Color(0xFF3F3986),
+                    color: isSelected ? Colors.white : const Color(0xFF3F3986),
                     fontWeight: FontWeight.w500,
                   ),
                   onSelected: (_) => toggleTopic(topic),
-                  backgroundColor: Color(0xFFE8E6FB),
+                  backgroundColor: const Color(0xFFE8E6FB),
                 );
               }).toList(),
             ),
@@ -83,7 +106,7 @@ class _TopicPreferencePageState extends State<TopicPreferencePage> {
               child: ElevatedButton(
                 onPressed: savePreferences,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Color(0xFF3F3986),
+                  backgroundColor: const Color(0xFF3F3986),
                   padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 14),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(30),

@@ -1,13 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-
-
+import 'newsletter_detail.dart';
 import 'auth_page.dart';
-import '/customisations/topic_preference.dart';
-import '/customisations/summary_page.dart';
-import '/customisations/tone_format_page.dart';
-import '/customisations/language_page.dart';
-import '/customisations/delivery_page.dart';
+import 'package:update_latest/customisations/topic_preference.dart';
+import 'package:update_latest/customisations/delivery_page.dart';
+import 'package:update_latest/customisations/summary_page.dart';
+import 'package:update_latest/customisations/tone_format_page.dart';
+import 'package:update_latest/customisations/language_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -18,8 +16,6 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   bool showDigest = true;
-
-  final List<Map<String, String>> savedArticles = [];
 
   final List<Map<String, String>> newsletters = [
     {
@@ -32,7 +28,7 @@ class _HomePageState extends State<HomePage> {
     },
     {
       'title': 'Tech Digest',
-      'summary': 'This week\'s must-know stories in tech and startups.',
+      'summary': 'This week’s must-know stories in tech and startups.',
     },
     {
       'title': 'Sports News',
@@ -40,38 +36,21 @@ class _HomePageState extends State<HomePage> {
     },
     {
       'title': 'Entertainment News',
-      'summary': 'Stay tuned with the newest in movies, music, and pop culture.',
+      'summary':
+          'Stay tuned with the newest in movies, music, and pop culture.',
     },
   ];
 
-  void saveArticle(Map<String, String> article) {
-    if (!savedArticles.contains(article)) {
-      setState(() {
-        savedArticles.add(article);
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Article saved!')),
-      );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Already saved')),
-      );
-    }
-  }
-
-  void removeArticle(Map<String, String> article) {
-    setState(() {
-      savedArticles.remove(article);
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Removed from saved')),
+  void _logout() {
+    // Clear user session or token here if needed
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (_) => AuthPage()),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final displayList = showDigest ? newsletters : savedArticles;
-
     return Scaffold(
       appBar: AppBar(
         backgroundColor: const Color(0xFF8981DF),
@@ -82,11 +61,9 @@ class _HomePageState extends State<HomePage> {
           Padding(
             padding: const EdgeInsets.only(right: 16.0),
             child: TextButton(
-              onPressed: () {
-                Navigator.push(context, MaterialPageRoute(builder: (_) => const AuthPage()));
-              },
+              onPressed: _logout,
               child: const Text(
-                'Login',
+                'Logout',
                 style: TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
@@ -113,31 +90,37 @@ class _HomePageState extends State<HomePage> {
                 ),
               ),
               const SizedBox(height: 20),
-              for (final feature in [
-                'Topics & Preferences',
-                'Summary Depth',
-                'Tone & Format',
-                'Language',
-                'Delivery Settings',
-              ])
-                FeatureDrawerButton(label: feature),
-              const SizedBox(height: 30),
+              FeatureDrawerButton(
+                label: 'Topics & Preferences',
+                targetPage: TopicPreferencePage(),
+              ),
+              FeatureDrawerButton(
+                label: 'Summary Depth',
+                targetPage: SummaryPage(),
+              ),
+              FeatureDrawerButton(
+                label: 'Tone & Format',
+                targetPage: ToneFormatPage(),
+              ),
+              FeatureDrawerButton(
+                label: 'Language',
+                targetPage: LanguagePage(),
+              ),
+              FeatureDrawerButton(
+                label: 'Delivery Settings',
+                targetPage: DeliverySettingsPage(),
+              ),
+              const SizedBox(height: 20),
               ElevatedButton.icon(
-                onPressed: () async {
-                  await FirebaseAuth.instance.signOut();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Logged out')),
-                  );
-                },
-                icon: const Icon(Icons.logout),
-                label: const Text('Logout'),
+                onPressed: _logout,
+                icon: const Icon(Icons.logout, color: Colors.white),
+                label: const Text('Logout', style: TextStyle(color: Colors.white)),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF3F3986),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  backgroundColor: const Color(0xFF968CE4),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(20),
                   ),
+                  padding: const EdgeInsets.symmetric(vertical: 16),
                 ),
               ),
             ],
@@ -168,8 +151,14 @@ class _HomePageState extends State<HomePage> {
                       letterSpacing: 1.5,
                     ),
                     children: [
-                      TextSpan(text: 'ONE', style: TextStyle(color: Colors.white)),
-                      TextSpan(text: 'DIGEST', style: TextStyle(color: Color(0xFF3F3986))),
+                      TextSpan(
+                        text: 'ONE',
+                        style: TextStyle(color: Colors.white),
+                      ),
+                      TextSpan(
+                        text: 'DIGEST',
+                        style: TextStyle(color: Color(0xFF3F3986)),
+                      ),
                     ],
                   ),
                 ),
@@ -203,18 +192,14 @@ class _HomePageState extends State<HomePage> {
             ),
           ),
           Expanded(
-            child: displayList.isEmpty
-                ? const Center(
-                    child: Text('No articles to display.'),
-                  )
-                : ListView.builder(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    itemCount: displayList.length,
-                    itemBuilder: (context, index) {
-                      final item = displayList[index];
-                      return _buildModernNewsletterCard(item);
-                    },
-                  ),
+            child: ListView.builder(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              itemCount: newsletters.length,
+              itemBuilder: (context, index) {
+                final item = newsletters[index];
+                return _buildModernNewsletterCard(item, context);
+              },
+            ),
           ),
         ],
       ),
@@ -227,6 +212,9 @@ class _HomePageState extends State<HomePage> {
         setState(() {
           showDigest = (text == 'Your Digest');
         });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('$text selected (coming soon)')),
+        );
       },
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 22),
@@ -237,7 +225,9 @@ class _HomePageState extends State<HomePage> {
         child: Text(
           text,
           style: TextStyle(
-            color: isActive ? const Color.fromARGB(255, 170, 161, 241) : Colors.white,
+            color: isActive
+                ? const Color.fromARGB(255, 170, 161, 241)
+                : Colors.white,
             fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
           ),
         ),
@@ -245,78 +235,88 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildModernNewsletterCard(Map<String, String> item) {
-    final isSaved = savedArticles.contains(item);
-
-    return Card(
-      elevation: 10,
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      child: Container(
-        decoration: BoxDecoration(
-          color: const Color(0xFFE8E6FB),
-          borderRadius: BorderRadius.circular(20),
-        ),
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              height: 60,
-              width: double.infinity,
-              decoration: BoxDecoration(
-                color: const Color(0xFF968CE4),
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              item['title'] ?? '',
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF3F3986),
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              item['summary'] ?? '',
-              style: TextStyle(
-                fontSize: 14,
-                color: const Color(0xFF3F3986).withOpacity(0.7),
-              ),
-            ),
-            const SizedBox(height: 12),
-            Row(
+  Widget _buildModernNewsletterCard(
+    Map<String, String> item,
+    BuildContext context,
+  ) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => NewsletterDetailPage(item: item)),
+        );
+      },
+      child: Card(
+        elevation: 10,
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Container(
+          decoration: BoxDecoration(
+            color: const Color(0xFFE8E6FB),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                IconButton(
-                  icon: const Icon(Icons.thumb_up_alt_outlined, color: Color(0xFF3F3986)),
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Upvoted! (coming soon)')),
-                    );
-                  },
-                ),
-                IconButton(
-                  icon: const Icon(Icons.thumb_down_alt_outlined, color: Color(0xFF3F3986)),
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Downvoted! (coming soon)')),
-                    );
-                  },
-                ),
-                IconButton(
-                  icon: Icon(
-                    isSaved ? Icons.delete_outline : Icons.bookmark_border,
-                    color: const Color(0xFF3F3986),
+                Container(
+                  height: 60,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF968CE4),
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  onPressed: () {
-                    isSaved ? removeArticle(item) : saveArticle(item);
-                  },
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  item['title'] ?? '',
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF3F3986),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  item['summary'] ?? '',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: const Color(0xFF3F3986).withOpacity(0.7),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(
+                        Icons.thumb_up_alt_outlined,
+                        size: 20,
+                        color: Color(0xFF3F3986),
+                      ),
+                      onPressed: () {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Upvoted! (coming soon)')),
+                        );
+                      },
+                    ),
+                    IconButton(
+                      icon: const Icon(
+                        Icons.thumb_down_alt_outlined,
+                        size: 20,
+                        color: Color(0xFF3F3986),
+                      ),
+                      onPressed: () {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Downvoted! (coming soon)')),
+                        );
+                      },
+                    ),
+                  ],
                 ),
               ],
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -325,8 +325,13 @@ class _HomePageState extends State<HomePage> {
 
 class FeatureDrawerButton extends StatelessWidget {
   final String label;
+  final Widget targetPage;
 
-  const FeatureDrawerButton({super.key, required this.label});
+  const FeatureDrawerButton({
+    super.key,
+    required this.label,
+    required this.targetPage,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -335,27 +340,19 @@ class FeatureDrawerButton extends StatelessWidget {
       child: ElevatedButton(
         onPressed: () {
           Navigator.pop(context);
-          if (label == 'Topics & Preferences') {
-            Navigator.push(context, MaterialPageRoute(builder: (_) => const TopicPreferencePage()));
-          } else if (label == 'Summary Depth') {
-            Navigator.push(context, MaterialPageRoute(builder: (_) => const SummaryPage()));
-          } else if (label == 'Tone & Format') {
-            Navigator.push(context, MaterialPageRoute(builder: (_) => const ToneFormatPage()));
-          } else if (label == 'Language') {
-            Navigator.push(context, MaterialPageRoute(builder: (_) => const LanguagePage()));
-          } else if (label == 'Delivery Settings') {
-            Navigator.push(context, MaterialPageRoute(builder: (_) => const DeliverySettingsPage()));
-          }
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => targetPage),
+          );
         },
         style: ElevatedButton.styleFrom(
           backgroundColor: const Color(0xFF968CE4),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
           padding: const EdgeInsets.symmetric(vertical: 16),
         ),
-        child: Text(
-          label,
-          style: const TextStyle(fontSize: 16, color: Colors.white),
-        ),
+        child: Text(label, style: const TextStyle(fontSize: 16, color: Colors.white)),
       ),
     );
   }

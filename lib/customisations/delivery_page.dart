@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class DeliverySettingsPage extends StatefulWidget {
   const DeliverySettingsPage({super.key});
@@ -8,18 +10,7 @@ class DeliverySettingsPage extends StatefulWidget {
 }
 
 class _DeliverySettingsPageState extends State<DeliverySettingsPage> {
-  TimeOfDay preferredTime = TimeOfDay(hour: 8, minute: 0);
   final Set<String> selectedChannels = {'Email'};
-
-  void pickTime() async {
-    final picked = await showTimePicker(
-      context: context,
-      initialTime: preferredTime,
-    );
-    if (picked != null) {
-      setState(() => preferredTime = picked);
-    }
-  }
 
   void toggleChannel(String channel) {
     setState(() {
@@ -31,13 +22,32 @@ class _DeliverySettingsPageState extends State<DeliverySettingsPage> {
     });
   }
 
-  void saveSettings() {
-    // Placeholder for backend saving
-    final formattedTime = preferredTime.format(context);
-    final channels = selectedChannels.join(', ');
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Saved: $formattedTime via $channels')),
-    );
+  Future<void> saveSettings() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('User not logged in')),
+      );
+      return;
+    }
+
+    final userDoc = FirebaseFirestore.instance.collection('users').doc(user.uid);
+
+    try {
+      await userDoc.set({
+        'preferences': {
+          'channels': selectedChannels.toList(),
+        }
+      }, SetOptions(merge: true));
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Settings saved successfully!')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error saving settings: $e')),
+      );
+    }
   }
 
   @override
@@ -56,18 +66,6 @@ class _DeliverySettingsPageState extends State<DeliverySettingsPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Preferred Delivery Time:',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-            const SizedBox(height: 10),
-            ElevatedButton.icon(
-              onPressed: pickTime,
-              icon: const Icon(Icons.schedule),
-              label: Text(preferredTime.format(context)),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF3F3986),
-              ),
-            ),
-            const SizedBox(height: 24),
             const Text('Delivery Channels:',
                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
             Wrap(
@@ -80,7 +78,8 @@ class _DeliverySettingsPageState extends State<DeliverySettingsPage> {
                   selectedColor: const Color(0xFF3F3986),
                   onSelected: (_) => toggleChannel(channel),
                   labelStyle: TextStyle(
-                      color: isSelected ? Colors.white : const Color(0xFF3F3986)),
+                    color: isSelected ? Colors.white : const Color(0xFF3F3986),
+                  ),
                   backgroundColor: const Color(0xFFE8E6FB),
                 );
               }).toList(),

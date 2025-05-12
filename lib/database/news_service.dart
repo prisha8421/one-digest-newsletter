@@ -4,7 +4,8 @@ import 'package:http/http.dart' as http;
 class NewsService {
   Future<List<dynamic>> fetchNewsForTopics(List<String> topics) async {
     final response = await http.post(
-      Uri.parse('http://localhost:5000/get-news'), // or hosted URL
+      Uri.parse('https://one-digest-newsletter.onrender.com/get-news'),
+, // or hosted URL
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'topics': topics}),
     );

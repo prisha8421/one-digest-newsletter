@@ -5,7 +5,7 @@ class NewsService {
   Future<List<dynamic>> fetchNewsForTopics(List<String> topics) async {
     final response = await http.post(
       Uri.parse('https://one-digest-newsletter.onrender.com/get-news'),
-, // or hosted URL
+ // or hosted URL
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'topics': topics}),
     );

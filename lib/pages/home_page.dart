@@ -1,10 +1,11 @@
+
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../database/news_service.dart';
 import 'auth_page.dart';
-import 'newsletter_detail.dart';
+
 import 'package:update_latest/customisations/topic_preference.dart';
 import 'package:update_latest/customisations/delivery_page.dart';
 import 'package:update_latest/customisations/summary_page.dart';
@@ -171,16 +172,24 @@ class _HomePageState extends State<HomePage> {
           Expanded(
             child: isLoading
                 ? const Center(child: CircularProgressIndicator())
-                : articles.isEmpty
-                    ? const Center(child: Text("No articles found."))
-                    : ListView.builder(
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        itemCount: articles.length,
-                        itemBuilder: (context, index) {
-                          final item = articles[index];
-                          return _buildModernNewsletterCard(item, context);
-                        },
-                      ),
+                : RefreshIndicator(
+                    onRefresh: fetchUserTopicsAndNews,
+                    child: articles.isEmpty
+                        ? ListView(
+                            children: [Center(child: Padding(
+                              padding: EdgeInsets.all(24.0),
+                              child: Text("No articles found."),
+                            ))],
+                          )
+                        : ListView.builder(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            itemCount: articles.length,
+                            itemBuilder: (context, index) {
+                              final item = articles[index];
+                              return _buildModernNewsletterCard(item, context);
+                            },
+                          ),
+                  ),
           ),
         ],
       ),

@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
-import 'newsletter_detail.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../database/news_service.dart';
 import 'auth_page.dart';
+import 'newsletter_detail.dart';
 import 'package:update_latest/customisations/topic_preference.dart';
 import 'package:update_latest/customisations/delivery_page.dart';
 import 'package:update_latest/customisations/summary_page.dart';
@@ -16,37 +20,33 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   bool showDigest = true;
+  List<dynamic> articles = [];
+  bool isLoading = true;
 
-  final List<Map<String, String>> newsletters = [
-    {
-      'title': 'AI in 2025',
-      'summary': 'Top trends in Artificial Intelligence you should watch.',
-    },
-    {
-      'title': 'Politics Today',
-      'summary': 'Latest updates and news from the political world.',
-    },
-    {
-      'title': 'Tech Digest',
-      'summary': 'This week’s must-know stories in tech and startups.',
-    },
-    {
-      'title': 'Sports News',
-      'summary': 'Catch up on all the latest sports events and updates.',
-    },
-    {
-      'title': 'Entertainment News',
-      'summary':
-          'Stay tuned with the newest in movies, music, and pop culture.',
-    },
-  ];
+  @override
+  void initState() {
+    super.initState();
+    fetchUserTopicsAndNews();
+  }
+
+  Future<void> fetchUserTopicsAndNews() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+    final topics = List<String>.from(doc['preferences']['topics'] ?? []);
+
+    final news = await NewsService().fetchNewsForTopics(topics);
+
+    setState(() {
+      articles = news;
+      isLoading = false;
+    });
+  }
 
   void _logout() {
-    // Clear user session or token here if needed
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (_) => AuthPage()),
-    );
+    FirebaseAuth.instance.signOut();
+    Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => AuthPage()));
   }
 
   @override
@@ -90,26 +90,11 @@ class _HomePageState extends State<HomePage> {
                 ),
               ),
               const SizedBox(height: 20),
-              FeatureDrawerButton(
-                label: 'Topics & Preferences',
-                targetPage: TopicPreferencePage(),
-              ),
-              FeatureDrawerButton(
-                label: 'Summary Depth',
-                targetPage: SummaryPage(),
-              ),
-              FeatureDrawerButton(
-                label: 'Tone & Format',
-                targetPage: ToneFormatPage(),
-              ),
-              FeatureDrawerButton(
-                label: 'Language',
-                targetPage: LanguagePage(),
-              ),
-              FeatureDrawerButton(
-                label: 'Delivery Settings',
-                targetPage: DeliverySettingsPage(),
-              ),
+              FeatureDrawerButton(label: 'Topics & Preferences', targetPage: TopicPreferencePage()),
+              FeatureDrawerButton(label: 'Summary Depth', targetPage: SummaryPage()),
+              FeatureDrawerButton(label: 'Tone & Format', targetPage: ToneFormatPage()),
+              FeatureDrawerButton(label: 'Language', targetPage: LanguagePage()),
+              FeatureDrawerButton(label: 'Delivery Settings', targetPage: DeliverySettingsPage()),
               const SizedBox(height: 20),
               ElevatedButton.icon(
                 onPressed: _logout,
@@ -117,9 +102,7 @@ class _HomePageState extends State<HomePage> {
                 label: const Text('Logout', style: TextStyle(color: Colors.white)),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF968CE4),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20),
-                  ),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                   padding: const EdgeInsets.symmetric(vertical: 16),
                 ),
               ),
@@ -151,14 +134,8 @@ class _HomePageState extends State<HomePage> {
                       letterSpacing: 1.5,
                     ),
                     children: [
-                      TextSpan(
-                        text: 'ONE',
-                        style: TextStyle(color: Colors.white),
-                      ),
-                      TextSpan(
-                        text: 'DIGEST',
-                        style: TextStyle(color: Color(0xFF3F3986)),
-                      ),
+                      TextSpan(text: 'ONE', style: TextStyle(color: Colors.white)),
+                      TextSpan(text: 'DIGEST', style: TextStyle(color: Color(0xFF3F3986))),
                     ],
                   ),
                 ),
@@ -192,14 +169,18 @@ class _HomePageState extends State<HomePage> {
             ),
           ),
           Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              itemCount: newsletters.length,
-              itemBuilder: (context, index) {
-                final item = newsletters[index];
-                return _buildModernNewsletterCard(item, context);
-              },
-            ),
+            child: isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : articles.isEmpty
+                    ? const Center(child: Text("No articles found."))
+                    : ListView.builder(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        itemCount: articles.length,
+                        itemBuilder: (context, index) {
+                          final item = articles[index];
+                          return _buildModernNewsletterCard(item, context);
+                        },
+                      ),
           ),
         ],
       ),
@@ -225,9 +206,7 @@ class _HomePageState extends State<HomePage> {
         child: Text(
           text,
           style: TextStyle(
-            color: isActive
-                ? const Color.fromARGB(255, 170, 161, 241)
-                : Colors.white,
+            color: isActive ? const Color.fromARGB(255, 170, 161, 241) : Colors.white,
             fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
           ),
         ),
@@ -235,17 +214,9 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildModernNewsletterCard(
-    Map<String, String> item,
-    BuildContext context,
-  ) {
+  Widget _buildModernNewsletterCard(dynamic item, BuildContext context) {
     return GestureDetector(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => NewsletterDetailPage(item: item)),
-        );
-      },
+      onTap: () => launchUrl(Uri.parse(item['link'])),
       child: Card(
         elevation: 10,
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -285,15 +256,15 @@ class _HomePageState extends State<HomePage> {
                     color: const Color(0xFF3F3986).withOpacity(0.7),
                   ),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 8),
+                Text(
+                  "Topic: ${item['topic']}",
+                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                ),
                 Row(
                   children: [
                     IconButton(
-                      icon: const Icon(
-                        Icons.thumb_up_alt_outlined,
-                        size: 20,
-                        color: Color(0xFF3F3986),
-                      ),
+                      icon: const Icon(Icons.thumb_up_alt_outlined, size: 20, color: Color(0xFF3F3986)),
                       onPressed: () {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(content: Text('Upvoted! (coming soon)')),
@@ -301,11 +272,7 @@ class _HomePageState extends State<HomePage> {
                       },
                     ),
                     IconButton(
-                      icon: const Icon(
-                        Icons.thumb_down_alt_outlined,
-                        size: 20,
-                        color: Color(0xFF3F3986),
-                      ),
+                      icon: const Icon(Icons.thumb_down_alt_outlined, size: 20, color: Color(0xFF3F3986)),
                       onPressed: () {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(content: Text('Downvoted! (coming soon)')),
@@ -340,16 +307,11 @@ class FeatureDrawerButton extends StatelessWidget {
       child: ElevatedButton(
         onPressed: () {
           Navigator.pop(context);
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => targetPage),
-          );
+          Navigator.push(context, MaterialPageRoute(builder: (_) => targetPage));
         },
         style: ElevatedButton.styleFrom(
           backgroundColor: const Color(0xFF968CE4),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           padding: const EdgeInsets.symmetric(vertical: 16),
         ),
         child: Text(label, style: const TextStyle(fontSize: 16, color: Colors.white)),

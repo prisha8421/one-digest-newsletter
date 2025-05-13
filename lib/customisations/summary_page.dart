@@ -18,6 +18,39 @@ class _SummaryPageState extends State<SummaryPage> {
     'In-depth Article',
   ];
 
+  @override
+  void initState() {
+    super.initState();
+    _loadSummaryPreference();
+  }
+
+  Future<void> _loadSummaryPreference() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final userDoc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .get();
+
+    final prefs = userDoc.data()?['preferences'] ?? {};
+    final savedDepth = prefs['summaryDepth'];
+
+    if (savedDepth != null && summaryOptions.contains(savedDepth)) {
+      setState(() {
+        selectedDepth = savedDepth;
+      });
+    } else {
+      // Set and save default if none exists
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .set({
+        'preferences': {'summaryDepth': 'Brief Summary'}
+      }, SetOptions(merge: true));
+    }
+  }
+
   Future<void> saveSummaryPreference() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {

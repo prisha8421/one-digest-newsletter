@@ -24,6 +24,37 @@ class _TopicPreferencePageState extends State<TopicPreferencePage> {
 
   final Set<String> selectedTopics = {};
 
+  @override
+  void initState() {
+    super.initState();
+    _loadPreferences();
+  }
+
+  Future<void> _loadPreferences() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final userDoc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+    final prefs = userDoc.data()?['preferences'] ?? {};
+    final topics = prefs['topics'];
+
+    if (topics != null && topics is List) {
+      setState(() {
+        selectedTopics.addAll(topics.cast<String>().where((t) => allTopics.contains(t)));
+      });
+    } else {
+      // If no preferences found, set default (e.g., 'Technology') and update Firestore
+      setState(() {
+        selectedTopics.add('Technology');
+      });
+      await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+        'preferences': {
+          'topics': selectedTopics.toList(),
+        }
+      }, SetOptions(merge: true));
+    }
+  }
+
   void toggleTopic(String topic) {
     setState(() {
       if (selectedTopics.contains(topic)) {

@@ -10,7 +10,39 @@ class DeliverySettingsPage extends StatefulWidget {
 }
 
 class _DeliverySettingsPageState extends State<DeliverySettingsPage> {
-  final Set<String> selectedChannels = {'Email'};
+  final Set<String> selectedChannels = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserSettings();
+  }
+
+  Future<void> _loadUserSettings() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final userDoc =
+        await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+    final prefs = userDoc.data()?['preferences'] ?? {};
+    final channels = prefs['channels'];
+
+    if (channels is List && channels.isNotEmpty) {
+      selectedChannels.addAll(channels.map((e) => e.toString()));
+    } else {
+      // Set default as 'Email'
+      selectedChannels.add('Email');
+      // Save default to Firestore
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .set({
+        'preferences': {'channels': ['Email']}
+      }, SetOptions(merge: true));
+    }
+
+    setState(() {});
+  }
 
   void toggleChannel(String channel) {
     setState(() {

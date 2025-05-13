@@ -16,6 +16,42 @@ class _ToneFormatPageState extends State<ToneFormatPage> {
   final List<String> toneOptions = ['Casual', 'Formal', 'Friendly', 'Professional'];
   final List<String> formatOptions = ['Bullet Points', 'Paragraph', 'Brief Highlights'];
 
+  @override
+  void initState() {
+    super.initState();
+    _loadToneAndFormat();
+  }
+
+  Future<void> _loadToneAndFormat() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final userDoc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+    final prefs = userDoc.data()?['preferences'] ?? {};
+
+    final tone = prefs['tone'];
+    final format = prefs['format'];
+
+    setState(() {
+      if (tone != null && toneOptions.contains(tone)) {
+        selectedTone = tone;
+      }
+      if (format != null && formatOptions.contains(format)) {
+        selectedFormat = format;
+      }
+    });
+
+    // If any of the preferences were missing, set defaults
+    if (tone == null || format == null) {
+      await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+        'preferences': {
+          'tone': selectedTone,
+          'format': selectedFormat,
+        }
+      }, SetOptions(merge: true));
+    }
+  }
+
   Future<void> saveToneAndFormat() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
@@ -61,8 +97,10 @@ class _ToneFormatPageState extends State<ToneFormatPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Choose your preferred tone:',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF3F3986))),
+            const Text(
+              'Choose your preferred tone:',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF3F3986)),
+            ),
             const SizedBox(height: 16),
             for (String tone in toneOptions)
               RadioListTile<String>(
@@ -73,8 +111,10 @@ class _ToneFormatPageState extends State<ToneFormatPage> {
                 onChanged: (value) => setState(() => selectedTone = value!),
               ),
             const SizedBox(height: 24),
-            const Text('Choose your preferred format:',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF3F3986))),
+            const Text(
+              'Choose your preferred format:',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF3F3986)),
+            ),
             const SizedBox(height: 16),
             for (String format in formatOptions)
               RadioListTile<String>(

@@ -22,7 +22,37 @@ class _LanguagePageState extends State<LanguagePage> {
     'pt': 'Portuguese',
   };
 
-  String selectedLanguage = 'en'; // Default language
+  String selectedLanguage = 'en'; // Default
+
+  @override
+  void initState() {
+    super.initState();
+    _loadLanguagePreference();
+  }
+
+  Future<void> _loadLanguagePreference() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final userDoc =
+        await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+    final prefs = userDoc.data()?['preferences'] ?? {};
+    final lang = prefs['language'];
+
+    if (lang != null && languageMap.containsKey(lang)) {
+      setState(() {
+        selectedLanguage = lang;
+      });
+    } else {
+      // Save default 'en' if not set
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .set({
+        'preferences': {'language': 'en'}
+      }, SetOptions(merge: true));
+    }
+  }
 
   Future<void> saveLanguagePreference() async {
     final user = FirebaseAuth.instance.currentUser;

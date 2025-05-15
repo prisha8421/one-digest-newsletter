@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:http/http.dart' as http;
+
 import '../database/news_service.dart';
 import 'auth_page.dart';
 import 'package:update_latest/customisations/topic_preference.dart';
@@ -8,7 +10,7 @@ import 'package:update_latest/customisations/delivery_page.dart';
 import 'package:update_latest/customisations/summary_page.dart';
 import 'package:update_latest/customisations/tone_format_page.dart';
 import 'package:update_latest/customisations/language_page.dart';
-import '../models/news_article.dart'; // Make sure this is imported correctly
+import '../models/news_article.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -39,6 +41,27 @@ class _HomePageState extends State<HomePage> {
       setState(() => isLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Failed to load news: $e")),
+      );
+    }
+  }
+
+  Future<void> triggerEmailNewsletter() async {
+    final uri = Uri.parse('http://10.0.2.2:5000/generate-and-send'); // Use your backend URL
+    try {
+      final response = await http.post(uri);
+
+      if (response.statusCode == 200) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('✅ Newsletter sent successfully!')),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('❌ Failed to send email: ${response.body}')),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('⚠️ Error: $e')),
       );
     }
   }
@@ -98,6 +121,17 @@ class _HomePageState extends State<HomePage> {
               FeatureDrawerButton(label: 'Language', targetPage: LanguagePage()),
               FeatureDrawerButton(label: 'Delivery Settings', targetPage: DeliverySettingsPage()),
               const SizedBox(height: 20),
+              ElevatedButton.icon(
+                onPressed: triggerEmailNewsletter,
+                icon: const Icon(Icons.send, color: Colors.white),
+                label: const Text('Send Newsletter', style: TextStyle(color: Colors.white)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF3F3986),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                ),
+              ),
+              const SizedBox(height: 12),
               ElevatedButton.icon(
                 onPressed: _logout,
                 icon: const Icon(Icons.logout, color: Colors.white),

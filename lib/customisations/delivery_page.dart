@@ -120,7 +120,6 @@ class _DeliverySettingsPageState extends State<DeliverySettingsPage> {
             Center(
               child: ElevatedButton(
                 onPressed: saveSettings,
-                child: const Text('Save Settings'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF3F3986),
                   padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 14),
@@ -128,6 +127,7 @@ class _DeliverySettingsPageState extends State<DeliverySettingsPage> {
                     borderRadius: BorderRadius.circular(30),
                   ),
                 ),
+                child: const Text('Save Settings'),
               ),
             )
           ],

@@ -2,3 +2,10 @@ Flask
 flask-cors
 feedparser
 gunicorn
+google-cloud-firestore
+python-dotenv
+openai
+fpdf
+reportlab
+
+

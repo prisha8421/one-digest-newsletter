@@ -1,16 +1,14 @@
-
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../database/news_service.dart';
 import 'auth_page.dart';
-
 import 'package:update_latest/customisations/topic_preference.dart';
 import 'package:update_latest/customisations/delivery_page.dart';
 import 'package:update_latest/customisations/summary_page.dart';
 import 'package:update_latest/customisations/tone_format_page.dart';
 import 'package:update_latest/customisations/language_page.dart';
+import '../models/news_article.dart'; // Make sure this is imported correctly
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -21,33 +19,36 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   bool showDigest = true;
-  List<dynamic> articles = [];
+  List<NewsArticle> articles = [];
   bool isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    fetchUserTopicsAndNews();
+    fetchLatestNews();
   }
 
-  Future<void> fetchUserTopicsAndNews() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
-
-    final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
-    final topics = List<String>.from(doc['preferences']['topics'] ?? []);
-
-    final news = await NewsService().fetchNewsForTopics(topics);
-
-    setState(() {
-      articles = news;
-      isLoading = false;
-    });
+  Future<void> fetchLatestNews() async {
+    try {
+      final news = await NewsService().fetchLatestGeneralNews();
+      setState(() {
+        articles = news;
+        isLoading = false;
+      });
+    } catch (e) {
+      setState(() => isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Failed to load news: $e")),
+      );
+    }
   }
 
   void _logout() {
     FirebaseAuth.instance.signOut();
-    Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => AuthPage()));
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (_) => AuthPage()),
+    );
   }
 
   @override
@@ -173,19 +174,23 @@ class _HomePageState extends State<HomePage> {
             child: isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : RefreshIndicator(
-                    onRefresh: fetchUserTopicsAndNews,
+                    onRefresh: fetchLatestNews,
                     child: articles.isEmpty
                         ? ListView(
-                            children: [Center(child: Padding(
-                              padding: EdgeInsets.all(24.0),
-                              child: Text("No articles found."),
-                            ))],
+                            children: const [
+                              Center(
+                                child: Padding(
+                                  padding: EdgeInsets.all(24.0),
+                                  child: Text("No articles found."),
+                                ),
+                              ),
+                            ],
                           )
                         : ListView.builder(
                             padding: const EdgeInsets.symmetric(vertical: 8),
                             itemCount: articles.length,
                             itemBuilder: (context, index) {
-                              final item = articles[index];
+                              final NewsArticle item = articles[index];
                               return _buildModernNewsletterCard(item, context);
                             },
                           ),
@@ -223,9 +228,9 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildModernNewsletterCard(dynamic item, BuildContext context) {
+  Widget _buildModernNewsletterCard(NewsArticle item, BuildContext context) {
     return GestureDetector(
-      onTap: () => launchUrl(Uri.parse(item['link'])),
+      onTap: () => launchUrl(Uri.parse(item.url)),
       child: Card(
         elevation: 10,
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -240,17 +245,20 @@ class _HomePageState extends State<HomePage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  height: 60,
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF968CE4),
+                if (item.imageUrl.isNotEmpty)
+                  ClipRRect(
                     borderRadius: BorderRadius.circular(12),
+                    child: Image.network(
+                      item.imageUrl,
+                      height: 180,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Container(height: 180, color: Colors.grey),
+                    ),
                   ),
-                ),
                 const SizedBox(height: 10),
                 Text(
-                  item['title'] ?? '',
+                  item.title,
                   style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -259,7 +267,7 @@ class _HomePageState extends State<HomePage> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  item['summary'] ?? '',
+                  item.description,
                   style: TextStyle(
                     fontSize: 14,
                     color: const Color(0xFF3F3986).withOpacity(0.7),
@@ -267,28 +275,8 @@ class _HomePageState extends State<HomePage> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  "Topic: ${item['topic']}",
+                  "Source: ${item.source}",
                   style: const TextStyle(fontSize: 12, color: Colors.grey),
-                ),
-                Row(
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.thumb_up_alt_outlined, size: 20, color: Color(0xFF3F3986)),
-                      onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Upvoted! (coming soon)')),
-                        );
-                      },
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.thumb_down_alt_outlined, size: 20, color: Color(0xFF3F3986)),
-                      onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Downvoted! (coming soon)')),
-                        );
-                      },
-                    ),
-                  ],
                 ),
               ],
             ),
@@ -316,14 +304,20 @@ class FeatureDrawerButton extends StatelessWidget {
       child: ElevatedButton(
         onPressed: () {
           Navigator.pop(context);
-          Navigator.push(context, MaterialPageRoute(builder: (_) => targetPage));
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => targetPage),
+          );
         },
         style: ElevatedButton.styleFrom(
           backgroundColor: const Color(0xFF968CE4),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           padding: const EdgeInsets.symmetric(vertical: 16),
         ),
-        child: Text(label, style: const TextStyle(fontSize: 16, color: Colors.white)),
+        child: Text(
+          label,
+          style: const TextStyle(fontSize: 16, color: Colors.white),
+        ),
       ),
     );
   }
